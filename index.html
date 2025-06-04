@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GPS UAdeC - Interior</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div id="loader" class="loader-wrapper">
+        <div class="spinner"></div>
+        <p>Cargando mapa...</p>
+      </div>
+      
+    <div class="logo-uadec">
+        <img src="Logo_de_la_UAdeC.webp" alt="Escudo UAdeC">
+      </div>
+      
+    
+    <div id="particles-js"></div>
+  <h1>GPS Sistemas UAdeC</h1>
+
+  <label for="pisoActual">¿En qué piso estás?</label>
+  <select id="pisoActual">
+    <option value="Seleccione">seleccione piso</option>
+    <option value="1">Piso 1</option>
+    <option value="2">Piso 2</option>
+    <option value="3">Piso 3</option>
+    
+  </select>
+
+  <label for="destino">¿A que salon quieres ir?</label>
+  <select id="destino"></select>
+  
+  <div id="contenedorPlano">
+  
+  </div>
+  <script src="loader.js"></script>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <script>
+    tsParticles.load("particles-js", {
+      background: {
+        color: { value: "#f4f8fc" }
+      },
+      fullScreen: {
+        enable: true,
+        zIndex: -1
+      },
+      particles: {
+        number: {
+          value: 40, 
+          density: {
+            enable: true,
+            area: 800
+          }
+        },
+        color: {
+          value: "#1c6dd0"
+        },
+        shape: {
+          type: "circle" 
+        },
+        opacity: {
+          value: 0.3
+        },
+        size: {
+          value: 3,
+          random: true
+        },
+        links: {
+          enable: false 
+        },
+        move: {
+          enable: true,
+          speed: 1,
+          direction: "none",
+          random: false,
+          straight: false,
+          outModes: {
+            default: "out"
+          }
+        }
+      },
+      interactivity: {
+        events: {
+          onHover: {
+            enable: false 
+          },
+          onClick: {
+            enable: false
+          }
+        }
+      },
+      detectRetina: false 
+    });
+  </script>
+  <script>
+  const bolaAzul = document.getElementById('bolaAzul');
+  let posX = 300;
+  let posY = 200;
+
+  const ancho = 600;
+  const alto = 400;
+
+  document.getElementById('botonSensor').addEventListener('click', () => {
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (event) => {
+        // Ajusta la sensibilidad del movimiento
+        const velocidad = 0.5;
+
+        // 'gamma' es izquierda/derecha, 'beta' es adelante/atrás
+        posX += event.gamma * velocidad;
+        posY += event.beta * velocidad;
+
+        // Limita la bola a los bordes del mapa
+        posX = Math.max(0, Math.min(ancho, posX));
+        posY = Math.max(0, Math.min(alto, posY));
+
+        bolaAzul.setAttribute('cx', posX);
+        bolaAzul.setAttribute('cy', posY);
+      });
+    } else {
+      alert('Tu dispositivo no soporta DeviceOrientation.');
+    }
+  });
+</script>
+
+</body>
+</html>

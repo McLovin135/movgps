@@ -1,0 +1,150 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f8fc;
+    color: #333;
+    padding: 30px 15px;
+    line-height: 1.6;
+  }
+  
+  h1 {
+    color: #004080;
+    font-size: 2.8em;
+    text-align: center;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    background: linear-gradient(to right, #004080, #1c6dd0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  h1::after {
+    content: "GPS Interior UAdeC";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    color: #004080;
+    opacity: 0.2;
+    transform: scaleY(-1);
+    pointer-events: none;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+  }
+  
+  label {
+    display: block;
+    font-weight: bold;
+    margin: 15px 0 5px;
+    font-size: 1.1em;
+    color: #004080;
+    transition: color 0.3s ease;
+  }
+  
+  select {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #b3d1ff;
+    font-size: 1em;
+    background-color: #f8fbff;
+    color: #333;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+    display: block;
+    margin-bottom: 20px;
+  }
+  
+  select:focus {
+    border-color: #1c6dd0;
+    box-shadow: 0 0 6px rgba(28, 109, 208, 0.4);
+    outline: none;
+  }
+  
+  #contenedorPlano {
+    margin-top: 30px;
+    background-color: #ffffff;
+    border: 2px solid #dce7f8;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-x: auto;
+  }
+  
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2em;
+    }
+  
+    select {
+      width: 100%;
+    }
+  
+    #contenedorPlano {
+      padding: 10px;
+    }
+  }
+  .logo-uadec {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .logo-uadec img {
+    width: 120px;
+    max-width: 25%;
+    height: auto;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    animation: flotar 4s ease-in-out infinite;
+  }
+  
+  @keyframes flotar {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  .loader-wrapper {
+    position: fixed;
+    z-index: 9999;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #f4f8fc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .spinner {
+    width: 60px;
+    height: 60px;
+    border: 6px solid #1c6dd0;
+    border-top: 6px solid transparent;
+    border-radius: 50%;
+    animation: girar 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  
+  @keyframes girar {
+    to { transform: rotate(360deg); }
+  }
+  
+  .loader-wrapper p {
+    font-size: 1.1em;
+    color: #004080;
+    font-weight: bold;
+  }
+  
+  
