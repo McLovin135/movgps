@@ -9,6 +9,11 @@ let animationFrameId = null;
 let pathRutaActual = null;
 let svgDoc = null;
 let sensitivity = 0.5;
+let initialBeta = null;
+let initialGamma = null;
+let lastCenterTime = 0;
+let targetCenterX = 0;
+let targetCenterY = 0;
 
 const destinosPorPiso = {
   1: ["Seleccione", "Direccion", "Prefectura", "Sala de Maestros", "Cubiculos Planta Baja", "Banos", "Area Medica", "Dentista", "Zona puma"],
@@ -89,6 +94,10 @@ function cargarPlano() {
     .then(svg => {
       contenedorPlano.innerHTML = svg;
       dibujarRuta();
+    })
+    .catch(err => {
+      console.error('Error al cargar el plano:', err);
+      contenedorPlano.innerHTML = '<p>Error al cargar el plano. Intente nuevamente.</p>';
     });
 }
 
@@ -98,9 +107,17 @@ function dibujarRuta() {
   const keyRuta = `${piso}_${destino}`;
   const pathRuta = rutas[keyRuta];
 
+  // Limpiar elementos anteriores
+  const rutaAnterior = contenedorPlano.querySelector('#rutaIndicada');
+  if (rutaAnterior) rutaAnterior.remove();
+  const flechaAnterior = contenedorPlano.querySelector('#flechita');
+  if (flechaAnterior) flechaAnterior.remove();
+
   if (!pathRuta) return;
 
   const svg = contenedorPlano.querySelector('svg');
+  if (!svg) return;
+
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", pathRuta);
   path.setAttribute("stroke", "red");
@@ -117,9 +134,17 @@ function dibujarRuta() {
   flecha.setAttribute("cx", puntoInicial.x);
   flecha.setAttribute("cy", puntoInicial.y);
   svg.appendChild(flecha);
+  
+  // Resetear posición y valores iniciales
   posX = puntoInicial.x;
   posY = puntoInicial.y;
+  initialBeta = null;
+  initialGamma = null;
 
+  // Centrar la vista en el punto inicial
+  centrarVista(puntoInicial.x, puntoInicial.y);
+
+  // Animación de la ruta
   path.animate([
     { strokeDasharray: "0, 1000" },
     { strokeDasharray: "1000, 0" }
@@ -128,56 +153,124 @@ function dibujarRuta() {
     fill: "forwards"
   });
 
-  let longitud = path.getTotalLength();
-  let progreso = 0;
-
-  function moverFlecha() {
-    const punto = path.getPointAtLength(progreso);
-    flecha.setAttribute("cx", punto.x);
-    flecha.setAttribute("cy", punto.y);
-    path.setAttribute("stroke-dasharray", `${progreso},${longitud}`);
-    progreso += 2;
-    if (progreso <= longitud) {
-      requestAnimationFrame(moverFlecha);
-    }
-  }
-
-  moverFlecha();
-  
   pathRutaActual = path;
   svgDoc = svg;
+}
+
+function centrarVista(x, y) {
+  const svg = contenedorPlano.querySelector('svg');
+  if (!svg) return;
+
+  const viewBox = svg.getAttribute('viewBox');
+  const [vbX, vbY, vbWidth, vbHeight] = viewBox ? viewBox.split(' ').map(Number) : [0, 0, svg.width.baseVal.value, svg.height.baseVal.value];
+  
+  // Calcular el centro deseado
+  const centerX = x - vbWidth / 3;
+  const centerY = y - vbHeight / 3;
+  
+  // Establecer nuevo viewBox centrado
+  svg.setAttribute('viewBox', `${centerX} ${centerY} ${vbWidth} ${vbHeight}`);
 }
 
 function moverConSensor(event) {
   if (!flecha || !isSensorActive || !pathRutaActual) return;
   
+  // Cancelar cualquier animación pendiente
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
   
-  const beta = event.beta ? Math.max(-45, Math.min(45, event.beta)) : 0;
-  const gamma = event.gamma ? Math.max(-45, Math.min(45, event.gamma)) : 0;
+  // Establecer valores iniciales en la primera lectura
+  if (initialBeta === null || initialGamma === null) {
+    initialBeta = event.beta;
+    initialGamma = event.gamma;
+    return;
+  }
   
-  const newX = posX + gamma * sensitivity;
-  const newY = posY + beta * sensitivity;
+  // Calcular diferencias respecto a la posición inicial
+  const betaDiff = (event.beta - initialBeta) || 0;
+  const gammaDiff = (event.gamma - initialGamma) || 0;
   
-  const svgRect = svgDoc.getBoundingClientRect();
-  const boundedX = Math.max(0, Math.min(svgRect.width, newX));
-  const boundedY = Math.max(0, Math.min(svgRect.height, newY));
+  // Limitar el rango de movimiento y aplicar sensibilidad
+  const limitedBeta = Math.max(-30, Math.min(30, betaDiff)) * sensitivity;
+  const limitedGamma = Math.max(-30, Math.min(30, gammaDiff)) * sensitivity;
   
+  // Calcular nueva posición (invertir gamma para movimiento natural)
+  const newX = posX - limitedGamma * 2;
+  const newY = posY + limitedBeta * 2;
+  
+  // Obtener dimensiones del SVG
+  const svg = contenedorPlano.querySelector('svg');
+  if (!svg) return;
+  
+  const svgRect = svg.getBoundingClientRect();
+  
+  // Limitar la posición a los bordes del SVG
+  const boundedX = Math.max(10, Math.min(svgRect.width - 10, newX));
+  const boundedY = Math.max(10, Math.min(svgRect.height - 10, newY));
+  
+  // Actualizar posición
   posX = boundedX;
   posY = boundedY;
   
+  // Mover la flecha
   flecha.setAttribute("cx", posX);
   flecha.setAttribute("cy", posY);
   
+  // Verificar proximidad al camino
   checkProximityToPath();
+  
+  // Centrar suavemente la vista en la flecha
+  smoothCenterView(posX, posY);
   
   animationFrameId = requestAnimationFrame(() => {});
 }
 
+function smoothCenterView(x, y) {
+  const now = Date.now();
+  if (now - lastCenterTime < 200) return; // Limitar a 5 veces por segundo
+  
+  targetCenterX = x;
+  targetCenterY = y;
+  lastCenterTime = now;
+  
+  const svg = contenedorPlano.querySelector('svg');
+  if (!svg) return;
+  
+  const currentViewBox = svg.getAttribute('viewBox');
+  const [currentX, currentY, width, height] = currentViewBox.split(' ').map(Number);
+  
+  // Calcular nuevo centro (ajustado para que la flecha no quede justo en el centro)
+  const newX = x - width / 3;
+  const newY = y - height / 3;
+  
+  // Animación suave del viewBox
+  const duration = 300; // ms
+  const startTime = performance.now();
+  
+  function animateViewBox(timestamp) {
+    const progress = Math.min((timestamp - startTime) / duration, 1);
+    const easedProgress = easeOutQuad(progress);
+    
+    const animX = currentX + (newX - currentX) * easedProgress;
+    const animY = currentY + (newY - currentY) * easedProgress;
+    
+    svg.setAttribute('viewBox', `${animX} ${animY} ${width} ${height}`);
+    
+    if (progress < 1) {
+      requestAnimationFrame(animateViewBox);
+    }
+  }
+  
+  requestAnimationFrame(animateViewBox);
+}
+
+function easeOutQuad(t) {
+  return t * (2 - t);
+}
+
 function checkProximityToPath() {
-  if (!pathRutaActual) return;
+  if (!pathRutaActual || !flecha) return;
   
   const puntoMasCercano = getClosestPointOnPath(posX, posY, pathRutaActual);
   const distancia = Math.sqrt(Math.pow(puntoMasCercano.x - posX, 2) + Math.pow(puntoMasCercano.y - posY, 2));
@@ -194,6 +287,7 @@ function getClosestPointOnPath(x, y, path) {
   let mejorDistancia = Infinity;
   const longitudTotal = path.getTotalLength();
   
+  // Verificar puntos cada 10px a lo largo del camino
   for (let i = 0; i <= longitudTotal; i += 10) {
     const punto = path.getPointAtLength(i);
     const distancia = Math.sqrt(Math.pow(punto.x - x, 2) + Math.pow(punto.y - y, 2));
@@ -211,20 +305,26 @@ async function activarSensor() {
   try {
     if (typeof DeviceOrientationEvent !== 'undefined' && 
         typeof DeviceOrientationEvent.requestPermission === 'function') {
-     
       const permissionState = await DeviceOrientationEvent.requestPermission();
       
       if (permissionState === 'granted') {
         isSensorActive = true;
+        initialBeta = null;
+        initialGamma = null;
         window.addEventListener("deviceorientation", moverConSensor);
+        alert("Sensor de movimiento activado correctamente.");
+      } else {
+        alert("Se necesitan permisos para usar el sensor de movimiento.");
       }
     } else {
-  
       isSensorActive = true;
+      initialBeta = null;
+      initialGamma = null;
       window.addEventListener("deviceorientation", moverConSensor);
     }
   } catch (error) {
     console.error("Error al activar el sensor:", error);
+    alert("Error al activar el sensor: " + error.message);
   }
 }
 
@@ -237,15 +337,50 @@ function limpiarSensor() {
   isSensorActive = false;
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const userConfirmed = confirm(
-    "Esta app usa el sensor de movimiento de tu dispositivo para navegar por el mapa. " +
-    "¿Quieres activar esta función? (Se te pedirán permisos si es necesario)"
-  );
-  
-  if (userConfirmed) {
-    activarSensor();
+// Evento para ajustar sensibilidad con teclado
+document.addEventListener('keydown', (e) => {
+  if (e.key === '+' && sensitivity < 2) {
+    sensitivity += 0.1;
+    console.log(`Sensibilidad aumentada a: ${sensitivity.toFixed(1)}`);
+    mostrarNotificacion(`Sensibilidad: ${sensitivity.toFixed(1)}`);
+  } else if (e.key === '-' && sensitivity > 0.1) {
+    sensitivity -= 0.1;
+    console.log(`Sensibilidad reducida a: ${sensitivity.toFixed(1)}`);
+    mostrarNotificacion(`Sensibilidad: ${sensitivity.toFixed(1)}`);
   }
+});
+
+function mostrarNotificacion(mensaje) {
+  const notificacion = document.createElement('div');
+  notificacion.style.position = 'fixed';
+  notificacion.style.bottom = '20px';
+  notificacion.style.right = '20px';
+  notificacion.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  notificacion.style.color = 'white';
+  notificacion.style.padding = '10px 20px';
+  notificacion.style.borderRadius = '5px';
+  notificacion.style.zIndex = '1000';
+  notificacion.textContent = mensaje;
+  
+  document.body.appendChild(notificacion);
+  
+  setTimeout(() => {
+    notificacion.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(notificacion);
+    }, 500);
+  }, 2000);
+}
+
+// Inicialización
+window.addEventListener('DOMContentLoaded', () => {
+  actualizarDestinos();
+  cargarPlano();
+  
+  // Mostrar instrucciones al inicio
+  setTimeout(() => {
+    mostrarNotificacion("Usa +/- para ajustar la sensibilidad del movimiento");
+  }, 1000);
 });
 
 pisoSelect.addEventListener('change', () => {
@@ -259,16 +394,30 @@ destinoSelect.addEventListener('change', () => {
   cargarPlano();
 });
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === '+' && sensitivity < 2) {
-    sensitivity += 0.1;
-    console.log(`Sensibilidad aumentada a: ${sensitivity.toFixed(1)}`);
-  } else if (e.key === '-' && sensitivity > 0.1) {
-    sensitivity -= 0.1;
-    console.log(`Sensibilidad reducida a: ${sensitivity.toFixed(1)}`);
+// Botón para activar/desactivar sensor
+const btnSensor = document.createElement('button');
+btnSensor.textContent = 'Activar Navegación por Movimiento';
+btnSensor.style.position = 'fixed';
+btnSensor.style.bottom = '20px';
+btnSensor.style.left = '20px';
+btnSensor.style.zIndex = '1000';
+btnSensor.style.padding = '10px 15px';
+btnSensor.style.backgroundColor = '#4CAF50';
+btnSensor.style.color = 'white';
+btnSensor.style.border = 'none';
+btnSensor.style.borderRadius = '4px';
+btnSensor.style.cursor = 'pointer';
+
+btnSensor.addEventListener('click', () => {
+  if (isSensorActive) {
+    limpiarSensor();
+    btnSensor.textContent = 'Activar Navegación por Movimiento';
+    btnSensor.style.backgroundColor = '#4CAF50';
+  } else {
+    activarSensor();
+    btnSensor.textContent = 'Desactivar Navegación por Movimiento';
+    btnSensor.style.backgroundColor = '#f44336';
   }
 });
 
-
-actualizarDestinos();
-cargarPlano();
+document.body.appendChild(btnSensor);
