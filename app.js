@@ -268,6 +268,38 @@ function cargarPlano() {
       
       initRealTimeTracking();
     });
+
+function initRealTimeTracking() {
+  if (!navigator.geolocation) {
+    console.error("Geolocation no soportada");
+    return;
+  }
+
+  const svgDoc = contenedorPlano.querySelector('svg');
+  if (!svgDoc) return;
+
+  if (!currentPositionMarker) {
+    currentPositionMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    currentPositionMarker.setAttribute("id", "currentPosition");
+    currentPositionMarker.setAttribute("r", "10");
+    currentPositionMarker.setAttribute("fill", "blue");
+    svgDoc.appendChild(currentPositionMarker);
+  }
+
+  const options = {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 5000
+  };
+
+  watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
+}
+
+pisoSelect.addEventListener('change', () => {
+  stopRealTimeTracking();
+  actualizarDestinos();
+  cargarPlano();
+});
 }
 window.addEventListener('beforeunload', stopRealTimeTracking);
 pisoSelect.addEventListener('change', stopRealTimeTracking);
