@@ -1,6 +1,8 @@
 const pisoSelect = document.getElementById('pisoActual');
 const destinoSelect = document.getElementById('destino');
 const contenedorPlano = document.getElementById('contenedorPlano');
+let watchId = null;
+let currentPositionMarker = null;
 
 const destinosPorPiso = {
    
@@ -140,8 +142,6 @@ if (piso === "3") {
   }
 }
 
-
-
 pisoSelect.addEventListener('change', () => {
   actualizarDestinos();
   cargarPlano();
@@ -150,3 +150,124 @@ destinoSelect.addEventListener('change', cargarPlano);
 
 actualizarDestinos();
 cargarPlano();
+function initRealTimeTracking() {
+
+  if (!navigator.geolocation) {
+    console.error("Geolocation is not supported by your browser");
+    return;
+  }
+  const svgDoc = contenedorPlano.querySelector('svg');
+  if (!svgDoc) return;
+
+  if (currentPositionMarker) {
+    svgDoc.removeChild(currentPositionMarker);
+  }
+
+  currentPositionMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  currentPositionMarker.setAttribute("id", "currentPosition");
+  currentPositionMarker.setAttribute("r", "10");
+  currentPositionMarker.setAttribute("fill", "blue");
+  currentPositionMarker.setAttribute("opacity", "0.7");
+  svgDoc.appendChild(currentPositionMarker);
+
+  const options = {
+    enableHighAccuracy: true,  
+    maximumAge: 0,
+    timeout: 5000
+  };
+
+  watchId = navigator.geolocation.watchPosition(
+    updatePosition,
+    handleGeolocationError,
+    options
+  );
+
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', handleOrientation);
+  }
+}
+
+function stopRealTimeTracking() {
+  if (watchId) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  
+  // Eliminar marcador
+  const svgDoc = contenedorPlano.querySelector('svg');
+  if (svgDoc && currentPositionMarker) {
+    svgDoc.removeChild(currentPositionMarker);
+    currentPositionMarker = null;
+  }
+  
+  if (window.DeviceOrientationEvent) {
+    window.removeEventListener('deviceorientation', handleOrientation);
+  }
+}
+
+function updatePosition(position) {
+  const coords = position.coords;
+  console.log("Posición actual:", coords.latitude, coords.longitude);
+  
+  const svgCoords = gpsToSvg(coords.latitude, coords.longitude, pisoSelect.value);
+  
+  if (currentPositionMarker && svgCoords) {
+    currentPositionMarker.setAttribute("cx", svgCoords.x);
+    currentPositionMarker.setAttribute("cy", svgCoords.y);
+  }
+}
+
+function handleOrientation(event) {
+
+  const beta = event.beta;  
+  const gamma = event.gamma; 
+  
+}
+
+function handleGeolocationError(error) {
+  console.error("Error en geolocalización:", error.message);
+  
+  // Intentar con menos precisión si falla el GPS
+  if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+    const options = {
+      enableHighAccuracy: false,  // No usar GPS
+      maximumAge: 30000,
+      timeout: 5000
+    };
+    watchId = navigator.geolocation.watchPosition(
+      updatePosition,
+      handleGeolocationError,
+      options
+    );
+  }
+}
+
+function gpsToSvg(lat, lng, piso) {
+
+  const refLat = 19.123456;  
+  const refLng = -99.123456; 
+  const scale = 100000;      
+  
+  const deltaLat = lat - refLat;
+  const deltaLng = lng - refLng;
+  
+  
+  return {
+    x: 500 + deltaLng * scale,  
+    y: 500 - deltaLat * scale   
+  };
+}
+
+function cargarPlano() {
+  const piso = pisoSelect.value;
+  fetch(`planos/plano_piso${piso}.svg`)
+    .then(res => res.text())
+    .then(svg => {
+      contenedorPlano.innerHTML = svg;
+      dibujarRuta();
+      
+      initRealTimeTracking();
+    });
+}
+window.addEventListener('beforeunload', stopRealTimeTracking);
+pisoSelect.addEventListener('change', stopRealTimeTracking);
