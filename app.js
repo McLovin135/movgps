@@ -67,6 +67,7 @@ const rutas = {
 
 };
 
+
 function actualizarDestinos() {
   const piso = pisoSelect.value;
   destinoSelect.innerHTML = '';
@@ -175,6 +176,7 @@ function updatePosition(position) {
     currentPositionMarker.setAttribute("cx", svgCoords.x);
     currentPositionMarker.setAttribute("cy", svgCoords.y);
 
+    // Verifica si está dentro del rango esperado
     if (svgCoords.x < 0 || svgCoords.y < 0 || svgCoords.x > 1000 || svgCoords.y > 1000) {
       alert("Estás fuera del rango del mapa. Verifica tu ubicación.");
     }
@@ -184,6 +186,7 @@ function updatePosition(position) {
 function handleOrientation(event) {
   const beta = event.beta;
   const gamma = event.gamma;
+  // Puedes usar esto para rotar el marcador si gustas
 }
 
 function handleGeolocationError(error) {
@@ -215,19 +218,8 @@ function gpsToSvg(lat, lng, piso) {
 
   return { x, y };
 }
-function simularPosicionEnUniversidad() {
-  const lat = 19.123460;  // muy cerca del refLat
-  const lng = -99.123455; // muy cerca del refLng
-  const position = {
-    coords: {
-      latitude: lat,
-      longitude: lng
-    }
-  };
-  updatePosition(position);
-}
 
-
+// Eventos principales
 pisoSelect.addEventListener('change', () => {
   stopRealTimeTracking();
   actualizarDestinos();
@@ -237,5 +229,6 @@ pisoSelect.addEventListener('change', () => {
 destinoSelect.addEventListener('change', cargarPlano);
 window.addEventListener('beforeunload', stopRealTimeTracking);
 
+// Inicialización
 actualizarDestinos();
 cargarPlano();
