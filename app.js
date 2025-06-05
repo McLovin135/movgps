@@ -227,10 +227,9 @@ function handleOrientation(event) {
 function handleGeolocationError(error) {
   console.error("Error en geolocalización:", error.message);
   
-  // Intentar con menos precisión si falla el GPS
   if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
     const options = {
-      enableHighAccuracy: false,  // No usar GPS
+      enableHighAccuracy: false,  
       maximumAge: 30000,
       timeout: 5000
     };
