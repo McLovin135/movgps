@@ -299,6 +299,31 @@ pisoSelect.addEventListener('change', () => {
   actualizarDestinos();
   cargarPlano();
 });
+   function simulateMovement() {
+  // Coordenadas iniciales aleatorias dentro del plano SVG (ajusta según tus dimensiones)
+  let mockX = Math.random() * 1000;  // Rango X del SVG
+  let mockY = Math.random() * 600;   // Rango Y del SVG
+
+  // Mover el punto cada 2 segundos (simula caminar)
+  const intervalId = setInterval(() => {
+    mockX += (Math.random() - 0.5) * 20; // Movimiento aleatorio en X
+    mockY += (Math.random() - 0.5) * 20; // Movimiento aleatorio en Y
+    
+    // Asegurarse de que no salga del plano
+    mockX = Math.max(0, Math.min(1000, mockX));
+    mockY = Math.max(0, Math.min(600, mockY));
+
+    // Actualizar posición y enfocar
+    if (currentPositionMarker) {
+      currentPositionMarker.setAttribute("cx", mockX);
+      currentPositionMarker.setAttribute("cy", mockY);
+      focusOnPosition(mockX, mockY);  // ¡Enfoque automático!
+    }
+  }, 2000);
+
+  // Detener la simulación al cambiar de piso o cerrar
+  return intervalId;
+}
 }
 window.addEventListener('beforeunload', stopRealTimeTracking);
 pisoSelect.addEventListener('change', stopRealTimeTracking);
