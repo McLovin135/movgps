@@ -215,6 +215,18 @@ function gpsToSvg(lat, lng, piso) {
 
   return { x, y };
 }
+function simularPosicionEnUniversidad() {
+  const lat = 19.123460;  // muy cerca del refLat
+  const lng = -99.123455; // muy cerca del refLng
+  const position = {
+    coords: {
+      latitude: lat,
+      longitude: lng
+    }
+  };
+  updatePosition(position);
+}
+
 
 pisoSelect.addEventListener('change', () => {
   stopRealTimeTracking();
