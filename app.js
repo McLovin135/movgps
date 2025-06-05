@@ -5,24 +5,10 @@ let watchId = null;
 let currentPositionMarker = null;
 
 const destinosPorPiso = {
-   
-    
-    1: ["Seleccione","Direccion", "Prefectura", "Sala de Maestros", "Cubiculos Planta Baja", "Banos", "Area Medica",
-        "Dentista", "Zona puma"
-    ],
-    3: ["Seleccione",
-        "Aula 7",
-        "Aula 8", "Aula 9","Aula 10","Aula 11","Aula 12","Aula 13","Aula 14","Aula 15","Aula 16","Aula 17",
-        "Aula 18","Aula 19","Aula 20","Aula 21","Aula 22","Aula 23","Aula 24","Aula 25","Banos","Ciencias basicas","Cisco 2","Cisco1","Laboratorio De Electronica",   
-    ],
-   2: ["Seleccione",
-    "Aula 1", "Aula 2","Aula 3","Aula 32","Banos","Competitividad","Coronel","Cubículo Planta 2",
-    "Laboratorio Industrial","Laboratorio Magna","Laboratorio TI","Oficina Grande","Pachuca","Sala de capacitación", "Secretaría Académica"
-  ],
-  
-  
+  1: ["Seleccione", "Direccion", "Prefectura", "Sala de Maestros", "Cubiculos Planta Baja", "Banos", "Area Medica", "Dentista", "Zona puma"],
+  2: ["Seleccione", "Aula 1", "Aula 2", "Aula 3", "Aula 32", "Banos", "Competitividad", "Coronel", "Cubículo Planta 2", "Laboratorio Industrial", "Laboratorio Magna", "Laboratorio TI", "Oficina Grande", "Pachuca", "Sala de capacitación", "Secretaría Académica"],
+  3: ["Seleccione", "Aula 7", "Aula 8", "Aula 9", "Aula 10", "Aula 11", "Aula 12", "Aula 13", "Aula 14", "Aula 15", "Aula 16", "Aula 17", "Aula 18", "Aula 19", "Aula 20", "Aula 21", "Aula 22", "Aula 23", "Aula 24", "Aula 25", "Banos", "Ciencias basicas", "Cisco 2", "Cisco1", "Laboratorio De Electronica"]
 };
-
 const rutas = {
 
     "1_Seleccione":"",
@@ -81,7 +67,6 @@ const rutas = {
 
 };
 
-
 function actualizarDestinos() {
   const piso = pisoSelect.value;
   destinoSelect.innerHTML = '';
@@ -100,62 +85,42 @@ function cargarPlano() {
     .then(svg => {
       contenedorPlano.innerHTML = svg;
       dibujarRuta();
+      initRealTimeTracking();
     });
 }
 
 function dibujarRuta() {
   const piso = pisoSelect.value;
-  const destino = destinoSelect.value; 
+  const destino = destinoSelect.value;
   const keyRuta = `${piso}_${destino}`;
   const pathRuta = rutas[keyRuta];
 
-  {
-    const svgDoc = contenedorPlano.querySelector('svg');
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", pathRuta);
-    let strokeWidth = 5;
-if (piso === "2") {
-  strokeWidth = .8; 
- 
-}
-if (piso === "3") {
-    strokeWidth = .8; 
-   
-  }
-    path.setAttribute("stroke", "red");
-    path.setAttribute("stroke-width", strokeWidth);
-    path.setAttribute("fill", "none");
-    path.setAttribute("id", "rutaIndicada");
-    svgDoc.appendChild(path);
-    
+  if (!pathRuta) return;
 
-    path.animate([
-      { strokeDasharray: "0, 1000" },
-      { strokeDasharray: "1000, 0" }
-    ], 
-    {
-      duration: 1500,
-      
-      fill: "forwards"
-    
-    });
-  }
+  const svgDoc = contenedorPlano.querySelector('svg');
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", pathRuta);
+  path.setAttribute("stroke", "red");
+  path.setAttribute("stroke-width", piso === "2" || piso === "3" ? 0.8 : 5);
+  path.setAttribute("fill", "none");
+  path.setAttribute("id", "rutaIndicada");
+  svgDoc.appendChild(path);
+
+  path.animate([
+    { strokeDasharray: "0, 1000" },
+    { strokeDasharray: "1000, 0" }
+  ], {
+    duration: 1500,
+    fill: "forwards"
+  });
 }
 
-pisoSelect.addEventListener('change', () => {
-  actualizarDestinos();
-  cargarPlano();
-});
-destinoSelect.addEventListener('change', cargarPlano);
-
-actualizarDestinos();
-cargarPlano();
 function initRealTimeTracking() {
-
   if (!navigator.geolocation) {
-    console.error("Geolocation is not supported by your browser");
+    console.error("Geolocation no soportada");
     return;
   }
+
   const svgDoc = contenedorPlano.querySelector('svg');
   if (!svgDoc) return;
 
@@ -171,16 +136,12 @@ function initRealTimeTracking() {
   svgDoc.appendChild(currentPositionMarker);
 
   const options = {
-    enableHighAccuracy: true,  
+    enableHighAccuracy: true,
     maximumAge: 0,
     timeout: 5000
   };
 
-  watchId = navigator.geolocation.watchPosition(
-    updatePosition,
-    handleGeolocationError,
-    options
-  );
+  watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
 
   if (window.DeviceOrientationEvent) {
     window.addEventListener('deviceorientation', handleOrientation);
@@ -192,14 +153,13 @@ function stopRealTimeTracking() {
     navigator.geolocation.clearWatch(watchId);
     watchId = null;
   }
-  
-  // Eliminar marcador
+
   const svgDoc = contenedorPlano.querySelector('svg');
   if (svgDoc && currentPositionMarker) {
     svgDoc.removeChild(currentPositionMarker);
     currentPositionMarker = null;
   }
-  
+
   if (window.DeviceOrientationEvent) {
     window.removeEventListener('deviceorientation', handleOrientation);
   }
@@ -208,90 +168,52 @@ function stopRealTimeTracking() {
 function updatePosition(position) {
   const coords = position.coords;
   console.log("Posición actual:", coords.latitude, coords.longitude);
-  
+
   const svgCoords = gpsToSvg(coords.latitude, coords.longitude, pisoSelect.value);
-  
-  if (currentPositionMarker && svgCoords) {
+
+  if (svgCoords && currentPositionMarker) {
     currentPositionMarker.setAttribute("cx", svgCoords.x);
     currentPositionMarker.setAttribute("cy", svgCoords.y);
+
+    if (svgCoords.x < 0 || svgCoords.y < 0 || svgCoords.x > 1000 || svgCoords.y > 1000) {
+      alert("Estás fuera del rango del mapa. Verifica tu ubicación.");
+    }
   }
 }
 
 function handleOrientation(event) {
-
-  const beta = event.beta;  
-  const gamma = event.gamma; 
-  
+  const beta = event.beta;
+  const gamma = event.gamma;
 }
 
 function handleGeolocationError(error) {
   console.error("Error en geolocalización:", error.message);
-  
   if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
     const options = {
-      enableHighAccuracy: false,  
+      enableHighAccuracy: false,
       maximumAge: 30000,
       timeout: 5000
     };
-    watchId = navigator.geolocation.watchPosition(
-      updatePosition,
-      handleGeolocationError,
-      options
-    );
+    watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
   }
 }
 
 function gpsToSvg(lat, lng, piso) {
+  const refLat = 19.123456;
+  const refLng = -99.123456;
+  const scale = 100000;
 
-  const refLat = 19.123456;  
-  const refLng = -99.123456; 
-  const scale = 100000;      
-  
   const deltaLat = lat - refLat;
   const deltaLng = lng - refLng;
-  
-  
-  return {
-    x: 500 + deltaLng * scale,  
-    y: 500 - deltaLat * scale   
-  };
-}
 
-function cargarPlano() {
-  const piso = pisoSelect.value;
-  fetch(`planos/plano_piso${piso}.svg`)
-    .then(res => res.text())
-    .then(svg => {
-      contenedorPlano.innerHTML = svg;
-      dibujarRuta();
-      
-      initRealTimeTracking();
-    });
+  const x = 500 + deltaLng * scale;
+  const y = 500 - deltaLat * scale;
 
-function initRealTimeTracking() {
-  if (!navigator.geolocation) {
-    console.error("Geolocation no soportada");
-    return;
+  if (x < 0 || y < 0 || x > 1000 || y > 1000) {
+    return null;
   }
 
-  const svgDoc = contenedorPlano.querySelector('svg');
-  if (!svgDoc) return;
-
-  if (!currentPositionMarker) {
-    currentPositionMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    currentPositionMarker.setAttribute("id", "currentPosition");
-    currentPositionMarker.setAttribute("r", "10");
-    currentPositionMarker.setAttribute("fill", "blue");
-    svgDoc.appendChild(currentPositionMarker);
-  }
-
-  const options = {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 5000
-  };
-
-  watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
+  return { x, y };
 }
 
 pisoSelect.addEventListener('change', () => {
@@ -299,6 +221,9 @@ pisoSelect.addEventListener('change', () => {
   actualizarDestinos();
   cargarPlano();
 });
-}
+
+destinoSelect.addEventListener('change', cargarPlano);
 window.addEventListener('beforeunload', stopRealTimeTracking);
-pisoSelect.addEventListener('change', stopRealTimeTracking);
+
+actualizarDestinos();
+cargarPlano();
